@@ -330,8 +330,7 @@
         }
 
         localStorage.setItem(STORAGE_KEYS.email, email);
-
-        setMessage(`驗證碼已建立。\n目前測試碼：${data.code}\n之後會改成寄到 Email。`);
+        setMessage("驗證碼已寄出，請到 Email 收信。");
       } catch (err) {
         setMessage("發送失敗，請稍後再試。");
       } finally {
