@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tally 表單限時 15 分鐘</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 56px;
+      background: #111827;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 14px;
+    }
+
+    .title {
+      font-weight: 700;
+    }
+
+    .timer {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .notice {
+      background: #fff7ed;
+      color: #9a3412;
+      padding: 10px 16px;
+      border-bottom: 1px solid #fed7aa;
+      font-size: 14px;
+    }
+
+    .form-wrap {
+      flex: 1;
+      width: 100%;
+      height: calc(100vh - 96px);
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: #fff;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.78);
+      z-index: 9999;
+      padding: 24px;
+    }
+
+    .overlay-box {
+      width: 100%;
+      max-width: 520px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .overlay-box h1 {
+      margin: 0 0 12px;
+      font-size: 28px;
+      color: #b91c1c;
+    }
+
+    .overlay-box p {
+      margin: 0;
+      line-height: 1.7;
+      color: #374151;
+      font-size: 16px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title">Tally 表單頁面</div>
+      <div class="timer">剩餘時間：<span id="countdown">15:00</span></div>
+    </div>
+
+    <div class="notice">
+      請在 15 分鐘內完成填寫。剩餘 1 分鐘時會自動提醒。
+    </div>
+
+    <div class="form-wrap" id="formWrap">
+      <iframe
+        id="tallyFrame"
+        src="https://tally.so/r/rj1742?transparentBackground=1&dynamicHeight=1"
+        title="Tally Form"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+    </div>
+  </div>
+
+  <div class="overlay" id="timeoutOverlay">
+    <div class="overlay-box">
+      <h1>填寫時間已到</h1>
+      <p>本頁表單使用時間為 15 分鐘，系統已停止顯示表單。</p>
+      <p>請重新回到指定入口頁面後再操作。</p>
+    </div>
+  </div>
+
+  <script>
+    const LIMIT_SECONDS = 15 * 60;
+    const WARNING_SECONDS = 60;
+    const STORAGE_KEY = "tally_limit_start_time_v1";
+
+    const countdownEl = document.getElementById("countdown");
+    const formWrapEl = document.getElementById("formWrap");
+    const timeoutOverlayEl = document.getElementById("timeoutOverlay");
+
+    let hasWarned = false;
+
+    function getOrCreateStartTime() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return Number(saved);
+
+      const now = Date.now();
+      localStorage.setItem(STORAGE_KEY, String(now));
+      return now;
+    }
+
+    function formatTime(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function lockForm() {
+      formWrapEl.classList.add("hidden");
+      timeoutOverlayEl.style.display = "flex";
+    }
+
+    function updateCountdown() {
+      const startTime = getOrCreateStartTime();
+      const now = Date.now();
+      const elapsedSeconds = Math.floor((now - startTime) / 1000);
+      const remainingSeconds = LIMIT_SECONDS - elapsedSeconds;
+
+      if (remainingSeconds <= 0) {
+        countdownEl.textContent = "00:00";
+        lockForm();
+        return false;
+      }
+
+      countdownEl.textContent = formatTime(remainingSeconds);
+
+      if (!hasWarned && remainingSeconds <= WARNING_SECONDS) {
+        hasWarned = true;
+        alert("提醒：距離表單關閉只剩 1 分鐘。");
+      }
+
+      return true;
+    }
+
+    const stillActive = updateCountdown();
+
+    if (stillActive) {
+      const timer = setInterval(() => {
+        const active = updateCountdown();
+        if (!active) {
+          clearInterval(timer);
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
