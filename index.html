@@ -62,7 +62,7 @@
 
     .card {
       width: 100%;
-      max-width: 480px;
+      max-width: 520px;
       background: white;
       border-radius: 16px;
       padding: 24px;
@@ -104,6 +104,23 @@
       border-color: #2563eb;
     }
 
+    .device-box {
+      margin: 12px 0 18px;
+      padding: 12px 14px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 10px;
+      color: #312e81;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .device-code {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+
     .btn-row {
       display: flex;
       gap: 10px;
@@ -119,10 +136,6 @@
       border-radius: 10px;
       cursor: pointer;
       font-size: 14px;
-    }
-
-    button.secondary {
-      background: #374151;
     }
 
     button:disabled {
@@ -207,6 +220,11 @@
         <h1>驗證後進入表單</h1>
         <p>請先輸入 Email，取得驗證碼後再進入表單頁面。</p>
 
+        <div class="device-box">
+          本裝置代號：<span class="device-code" id="deviceCodeText">----</span><br />
+          請確認 Email 中顯示的裝置代號與本頁相同。
+        </div>
+
         <div class="field">
           <label for="emailInput">Email</label>
           <input id="emailInput" type="email" placeholder="請輸入 Email" />
@@ -255,7 +273,9 @@
     const STORAGE_KEYS = {
       email: "tally_email_v1",
       sessionId: "tally_session_id_v1",
-      warned: "tally_warned_v1"
+      warned: "tally_warned_v1",
+      deviceId: "tally_device_id_v1",
+      deviceCode: "tally_device_code_v1"
     };
 
     const authScreen = document.getElementById("authScreen");
@@ -268,8 +288,36 @@
     const verifyOtpBtn = document.getElementById("verifyOtpBtn");
     const msgBox = document.getElementById("msgBox");
     const countdownEl = document.getElementById("countdown");
+    const deviceCodeText = document.getElementById("deviceCodeText");
 
     let statusTimer = null;
+
+    function generateDeviceCode() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let out = "";
+      for (let i = 0; i < 4; i++) {
+        out += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return out;
+    }
+
+    function getOrCreateDeviceId() {
+      let deviceId = localStorage.getItem(STORAGE_KEYS.deviceId);
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem(STORAGE_KEYS.deviceId, deviceId);
+      }
+      return deviceId;
+    }
+
+    function getOrCreateDeviceCode() {
+      let deviceCode = localStorage.getItem(STORAGE_KEYS.deviceCode);
+      if (!deviceCode) {
+        deviceCode = generateDeviceCode();
+        localStorage.setItem(STORAGE_KEYS.deviceCode, deviceCode);
+      }
+      return deviceCode;
+    }
 
     function setMessage(text) {
       msgBox.textContent = text;
@@ -305,6 +353,8 @@
 
     async function sendOtp() {
       const email = emailInput.value.trim();
+      const deviceId = getOrCreateDeviceId();
+      const deviceCode = getOrCreateDeviceCode();
 
       if (!email) {
         setMessage("請先輸入 Email。");
@@ -320,7 +370,7 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email, deviceId, deviceCode })
         });
 
         const data = await res.json();
@@ -331,7 +381,7 @@
         }
 
         localStorage.setItem(STORAGE_KEYS.email, email);
-        setMessage("驗證碼已寄出，請到 Email 收信。");
+        setMessage(`驗證碼已寄出，請到 Email 收信。\n請使用裝置代號 ${deviceCode} 對應的那封信。`);
       } catch (err) {
         setMessage("發送失敗，請稍後再試。");
       } finally {
@@ -342,6 +392,7 @@
     async function verifyOtp() {
       const email = emailInput.value.trim();
       const code = otpInput.value.trim();
+      const deviceId = getOrCreateDeviceId();
 
       if (!email || !code) {
         setMessage("請輸入 Email 和驗證碼。");
@@ -357,7 +408,7 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ email, code })
+          body: JSON.stringify({ email, code, deviceId })
         });
 
         const data = await res.json();
@@ -434,6 +485,9 @@
     function restoreSessionIfAny() {
       const savedEmail = localStorage.getItem(STORAGE_KEYS.email);
       const sessionId = localStorage.getItem(STORAGE_KEYS.sessionId);
+      const deviceCode = getOrCreateDeviceCode();
+
+      deviceCodeText.textContent = deviceCode;
 
       if (savedEmail) {
         emailInput.value = savedEmail;
