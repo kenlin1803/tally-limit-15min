@@ -211,6 +211,20 @@
       color: #374151;
       font-size: 16px;
     }
+
+    .copyright-text {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 13px;
+      color: rgba(17, 24, 39, 0.38);
+      letter-spacing: 1px;
+      z-index: 9000;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -274,6 +288,8 @@
       <p>如需重新使用，請重新完成驗證流程。</p>
     </div>
   </div>
+
+  <div class="copyright-text">著作權所有，翻印必究</div>
 
   <script>
     const API_BASE = "https://tally-otp-worker.orangebabe20.workers.dev";
