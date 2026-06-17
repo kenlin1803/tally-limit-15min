@@ -85,6 +85,15 @@
       line-height: 1.6;
     }
 
+    .form-label {
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 14px;
+    }
+
     .field {
       margin-bottom: 14px;
     }
@@ -243,6 +252,10 @@
         <h1>驗證後進入表單</h1>
         <p>請先輸入 Email，取得驗證碼後再進入表單頁面。</p>
 
+        <div class="form-label">
+          目前表單：<span id="formNameText">表單 A</span>
+        </div>
+
         <div class="device-box">
           本裝置代號：<span class="device-code" id="deviceCodeText">----</span><br />
           請確認 Email 中顯示的裝置代號與本頁相同。
@@ -273,7 +286,7 @@
     <div class="form-wrap hidden" id="formWrap">
       <iframe
         id="tallyFrame"
-        src="https://tally.so/r/WOqjej?dynamicHeight=1"
+        src=""
         title="Tally Form"
         loading="lazy"
         referrerpolicy="strict-origin-when-cross-origin"
@@ -295,10 +308,34 @@
     const API_BASE = "https://tally-otp-worker.orangebabe20.workers.dev";
     const WARNING_SECONDS = 180;
 
+    const FORMS = {
+      A: {
+        name: "表單 A",
+        url: "https://tally.so/r/WOqjej?dynamicHeight=1"
+      },
+      B: {
+        name: "表單 B",
+        url: "https://tally.so/r/eqAGjk?dynamicHeight=1"
+      },
+      C: {
+        name: "表單 C",
+        url: "https://tally.so/r/xxxxxxxx?dynamicHeight=1"
+      }
+    };
+
+    function getSelectedFormKey() {
+      const params = new URLSearchParams(window.location.search);
+      const raw = (params.get("form") || "A").toUpperCase();
+      return FORMS[raw] ? raw : "A";
+    }
+
+    const FORM_KEY = getSelectedFormKey();
+    const CURRENT_FORM = FORMS[FORM_KEY];
+
     const STORAGE_KEYS = {
       email: "tally_email_v1",
-      sessionId: "tally_session_id_v1",
-      warned: "tally_warned_v1",
+      sessionId: `tally_session_id_${FORM_KEY}_v1`,
+      warned: `tally_warned_${FORM_KEY}_v1`,
       deviceId: "tally_device_id_v1",
       deviceCode: "tally_device_code_v1"
     };
@@ -315,8 +352,13 @@
     const msgBox = document.getElementById("msgBox");
     const countdownEl = document.getElementById("countdown");
     const deviceCodeText = document.getElementById("deviceCodeText");
+    const formNameText = document.getElementById("formNameText");
+    const tallyFrame = document.getElementById("tallyFrame");
 
     let statusTimer = null;
+
+    formNameText.textContent = CURRENT_FORM.name;
+    tallyFrame.src = CURRENT_FORM.url;
 
     function generateDeviceCode() {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -500,12 +542,11 @@
         showForm();
 
         const warned = localStorage.getItem(STORAGE_KEYS.warned) === "true";
-        if (!warned && data.remainingSeconds <= WARNING_SECONDS) {
-          localStorage.setItem(STORAGE_KEYS.warned, "true");
-          showWarningNotice();
-        }
 
-        if (warned) {
+        if (data.remainingSeconds <= WARNING_SECONDS) {
+          if (!warned) {
+            localStorage.setItem(STORAGE_KEYS.warned, "true");
+          }
           showWarningNotice();
         } else {
           hideWarningNotice();
@@ -553,4 +594,3 @@
   </script>
 </body>
 </html>
-    
